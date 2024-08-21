@@ -1,0 +1,140 @@
+.loginArea {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.loginArea form {
+    max-width: 400px;
+    background: #edeffd;
+    border-radius: 25px;
+    padding: 20px;
+}
+
+.loginArea form h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #202528;
+}
+
+.loginArea form input {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    border: 1px solid #5f6f83;
+}
+
+.loginArea form button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 15px 0;
+    width: 100%;
+    padding: 10px;
+    border-radius: 25px;
+    background: #2196f3;
+    color: #202528;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+}
+
+.loginArea .newAccount {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    color: #202528;
+}
+
+form.login {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.password-validations {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin: 0 0 15px 0;
+}
+
+.password-validations {
+    color: var(--color-light-varient);
+}
+
+.loginArea input,
+.loginArea select {
+  display: block;
+  margin-bottom: 5px;
+  width: -webkit-fill-available;
+  padding: 5px 7px;
+  border: 2px solid var(--color-white2);
+  border-radius: 5px;
+  background-color: var(--color-white2);
+}
+
+.loginArea button {
+  width: 100%;
+  display: block;
+  background-color: var(--color-dark-varient);
+  border: 0;
+  color: #202528;
+  border-radius: 5px;
+  padding: 7px 0;
+  cursor: pointer;
+}
+
+form.login h1, form.register h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.requestArea {
+  display: flex;
+  justify-content: center;
+}
+
+.requestArea button {
+  color: #edeffd;
+  font-weight: 800;
+  text-transform: uppercase;
+  background-color: #1d5700;
+  width: 330px;
+  border-radius: 0 0 25px 25px;
+}
+
+.Verify{
+  display: grid !important;
+}
+
+.Verify .login {
+  border-radius: 25px 25px 0 0;
+}
+
+.verifyArea {
+  display: flex;
+  justify-content: center;
+}
+
+.MailVerified {
+  background: green;
+  padding: 10px;
+  color: white;
+  border-radius: 25px;
+}
+
+.MailNotVerified {
+  background: red;
+  padding: 10px;
+  color: white;
+  border-radius: 25px;
+  display: grid;
+  justify-items: center;
+}
+
+.verifyLink {
+  color: black;
+}

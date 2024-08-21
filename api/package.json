@@ -1,0 +1,28 @@
+{
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.511.0",
+    "@circle-fin/w3s-pw-web-sdk": "^1.1.1",
+    "axios": "^1.6.8",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1",
+    "emailjs": "^4.0.3",
+    "express": "^4.18.2",
+    "express-session": "^1.18.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.3.0",
+    "mongoose": "^8.0.3",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.14",
+    "nodemon": "^3.0.2",
+    "socket.io": "^4.7.5",
+    "uuid": "^10.0.0",
+    "ws": "^8.16.0"
+  },
+  "scripts": {
+    "start": "nodemon index.js"
+  }
+}
