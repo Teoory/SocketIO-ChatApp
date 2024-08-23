@@ -16,7 +16,6 @@ function Chat() {
     const socket = useRef(null);
 
     useEffect(() => {
-        // Establish socket connection
         socket.current = io('http://localhost:3030', {
             credentials: 'include',
         });
@@ -28,7 +27,18 @@ function Chat() {
 
         socket.current.on('newMessage', (message) => {
             setMessages((prevMessages) => [...prevMessages, message]);
+            scrollToBottom();
+            fetchMessages();            
         });
+
+        socket.current.on('hideAllMessages', () => {
+            setMessages(prevMessages => prevMessages.map(msg => ({ ...msg, hidden: true })));
+        });
+        socket
+        .current.on('showAllMessages', () => {
+            setMessages(prevMessages => prevMessages.map(msg => ({ ...msg, hidden: false })));
+        });
+        
 
         return () => {
             socket.current.disconnect();
@@ -77,6 +87,7 @@ function Chat() {
             console.error('Error fetching messages:', error);
         }
     };
+    
 
     const handleSendMessage = async () => {
         if (!userInfo || !userInfo.generatedUsername) {
@@ -84,6 +95,7 @@ function Chat() {
             return;
         }
 
+        const isSystem = userInfo.role.includes('system');
         const isAdmin = userInfo.role.includes('admin');
         const isPremium = userInfo.role.includes('premium');
         const isUser = userInfo.role.includes('user');
@@ -165,7 +177,15 @@ function Chat() {
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            handleSendMessage();
+
+            if (newMessage.startsWith('/')) {
+                // Handle slash commands
+                const command = newMessage.trim().toLowerCase();
+                socket.current.emit('command', { command, userId: userInfo._id, channelId });
+                setNewMessage(''); // Clear the input field
+            } else {
+                handleSendMessage(); // Handle normal messages
+            }
         }
     };
 
@@ -179,7 +199,7 @@ function Chat() {
             {messages.map((message, index) => (
                 !message.hidden || isAdmin ? (
                     <div key={index} className={`chat-message ${message.highlighted ? 'highlight' : ''}`}>
-                        {isAdmin && (
+                        {isAdmin && message.senderInfo.role !== 'system' && (
                             <button className='delete' onClick={() => handleHideMessage(message._id)}>
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
@@ -193,7 +213,7 @@ function Chat() {
                                 </svg>
                             </button>
                         )}
-                        {(isAdmin && message.sender !== userInfo.generatedUsername) && (
+                        {(isAdmin && message.sender !== userInfo.generatedUsername && message.senderInfo.role !== ('admin'&&'system')) && (
                             <button className='ban' onClick={() => handleBanUser(message.senderInfo._id)}>
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
@@ -223,6 +243,12 @@ function Chat() {
                                         <span className={`senderVip ${message.senderInfo.userColor}`}>
                                             <span className={`premium`}>💎(PREMIUM)</span> {message.sender}: 
                                         </span>
+                                    ) : message.senderInfo.role === "system" ? (
+                                        <span className={`senderSystem`}>
+                                            <span className={`system`}>
+                                                {/* SYSTEM KULLANICI ADI */}
+                                            </span> 
+                                        </span>
                                     ) : (
                                         <span className={`sender ${message.senderInfo.userColor}`}>{message.sender}:</span>
                                     )}
@@ -230,9 +256,14 @@ function Chat() {
                         }
                         {message.hidden && isAdmin ? (
                             <span className='admin-hidden-text'>{message.content}</span>
+                        ) : <>
+                        {message.senderInfo.role === "system" ? (
+                            <span className='system-message'>{message.content}</span>
                         ) : (
+                            
                             <span>{message.content}</span>
                         )}
+                        </>}
                     </div>
                 ) : null
             ))}

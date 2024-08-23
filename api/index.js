@@ -16,6 +16,7 @@ const nodemailer = require('nodemailer');
 const crypto = require ('crypto');
 const http = require('http');
 const { Server } = require('socket.io');
+const { time } = require('console');
 
 const app = express ();
 const server = http.createServer(app);
@@ -93,6 +94,166 @@ io.on('connection', (socket) => {
             socket.emit('error', { error: err.message });
         }
     });
+
+    // Mesaj içeriğini gizleme
+    socket.on('hideMessage', async (messageId) => {
+        try {
+            const message = await Message.findById(messageId);
+
+            if (!message) {
+                return socket.emit('error', { message: 'Message not found' });
+            }
+
+            message.hidden = !message.hidden;
+            await message.save();
+
+            io.to(message.channel).emit('messageHidden', message._id); // Kanalda mesajı gizle/göster
+        } catch (error) {
+            socket.emit('error', { error: error.message });
+        }
+    });
+
+    // Mesajı vurgulama
+    socket.on('highlightMessage', async (messageId) => {
+        const {message} = messageId;
+        try {
+            if (!message) {
+                return socket.emit('error', { message: 'Message not found' });
+            }
+            if (message.highlighted) {
+                message.highlighted = false;
+            } else {
+                message.highlighted = true;
+            }
+
+            io.to(message.channel).emit('messageHighlighted', message); // Kanalda mesajı vurgula
+        } catch (error) {
+            socket.emit('error', { error: error.message });
+        }
+    });
+
+
+    socket.on('command', async ({ command, userId, channelId }) => {
+        try {
+            // Check if the user is an admin
+            const user = await User.findById(userId); // Fetch the user info from your database
+            if (!user || !user.role.includes('admin')) {
+                return socket.emit('error', { message: 'You are not authorized to use this command.' });
+            }
+
+            if (command === '/bot') {
+                // Create and emit a normal-looking message
+                const message = await Message.create({
+                    content: 'Bu bir BOT mesajıdır.',
+                    sender: 'system',
+                    senderInfo: '66c74c138bb20534d4cdea86',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                io.to(channelId).emit('newMessage', message);
+            }
+
+            if (command === '/hideall') {
+                // Hide all messages in the channel
+                await Message.updateMany({ channel: channelId }, { hidden: true });
+
+                // Notify all clients in the channel to hide all messages
+                io.to(channelId).emit('hideAllMessages');
+
+                // Create and emit a normal-looking notification message
+                const notification = await Message.create({
+                    content: 'Bir ADMIN tarafından bütün mesajlar gizlendi.',
+                    sender: 'system',
+                    senderInfo: '66c74c138bb20534d4cdea86',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                // Emit this notification like a normal message
+                io.to(channelId).emit('newMessage', notification);
+            }
+
+            if (command === '/showall') {
+                // Show all messages in the channel
+                await Message.updateMany({ channel: channelId }, { hidden: false });
+
+                // Notify all clients in the channel to show all messages
+                io.to(channelId).emit('showAllMessages');
+                
+                // Create and emit a normal-looking notification message
+                const notification = await Message.create({
+                    content: 'Bir ADMIN tarafından bütün mesajlar gösterildi.',
+                    sender: 'system',
+                    senderInfo: '66c74c138bb20534d4cdea86',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                // Emit this notification like a normal message
+                io.to(channelId).emit('newMessage', notification);
+            }
+
+            if (command === '/deleteall') {
+                // Delete all messages in the channel
+                await Message.deleteMany({ channel: channelId });
+
+                // Notify all clients in the channel to delete all messages
+                io.to(channelId).emit('deleteAllMessages');
+
+                // Create and emit a normal-looking notification message
+                const notification = await Message.create({
+                    content: 'Bir ADMIN tarafından bütün mesajlar silindi.',
+                    sender: 'system',
+                    senderInfo: '66c74c138bb20534d4cdea86',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                // Emit this notification like a normal message
+                io.to(channelId).emit('newMessage', notification);
+            }
+
+            if (command === '/channelclose') {
+                // Close the channel
+                const channel = await Channel.findById(channelId);
+                channel.closed = true;
+                await channel.save();
+
+                // Notify all clients in the channel that the channel is closed
+                io.to(channelId).emit('channelClosed');
+
+                // Create and emit a normal-looking notification message
+                const notification = await Message.create({
+                    content: 'Bir ADMIN tarafından kanal kapatıldı.',
+                    sender: 'system',
+                    senderInfo: '66c74c138bb20534d4cdea86',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                // Emit this notification like a normal message
+                io.to(channelId).emit('newMessage', notification);
+            }
+            
+            else {
+                socket.emit('error', { message: 'Unknown command.' });
+            }
+        } catch (error) {
+            socket.emit('error', { error: error.message });
+        }
+    });
+
 
     // Kullanıcı kanala katıldığında
     socket.on('joinChannel', (channel) => {

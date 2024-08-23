@@ -21,7 +21,7 @@ const UserSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['admin', 'moderator', 'premium', 'user', 'quest'],
+        enum: ['admin', 'moderator', 'premium', 'user', 'quest', 'system'],
         default: 'quest'
     },
     isBanned: {

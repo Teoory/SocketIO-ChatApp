@@ -511,6 +511,15 @@ button.highlight {
   color: #888;
 }
 
+.system {
+  color: rgb(234, 0, 255);
+}
+
+.system-message {
+  display: flex;
+  justify-content: center;
+}
+
 .admin {
   color: red;
 }
