@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Navigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { UserContext } from '../Hooks/UserContext';
 import ChatSettings from '../Components/ChatSettings';
@@ -34,9 +34,25 @@ function Chat() {
         socket.current.on('hideAllMessages', () => {
             setMessages(prevMessages => prevMessages.map(msg => ({ ...msg, hidden: true })));
         });
-        socket
-        .current.on('showAllMessages', () => {
+
+        socket.current.on('showAllMessages', () => {
             setMessages(prevMessages => prevMessages.map(msg => ({ ...msg, hidden: false })));
+        });
+
+        socket.current.on('hiddenMessage', (updatedMessage) => {
+            setMessages(prevMessages => 
+                prevMessages.map(msg => 
+                    msg._id === updatedMessage._id ? { ...msg, hidden: updatedMessage.hidden } : msg
+                )
+            );
+        });
+
+        socket.current.on('highlightedMessage', (updatedMessage) => {
+            setMessages(prevMessages => 
+                prevMessages.map(msg => 
+                    msg._id === updatedMessage._id ? { ...msg, highlighted: updatedMessage.highlighted } : msg
+                )
+            );
         });
         
 
@@ -139,27 +155,29 @@ function Chat() {
     };
 
     const handleHideMessage = async (messageId) => {
-        try {
-            await fetch(`http://localhost:3030/hideMessage/${messageId}`, {
-                method: 'POST'
-            });
-            console.log('Message hidden successfully');
-            fetchMessages();
-        } catch (error) {
-            console.error('Error hiding message:', error);
-        }
+        socket.current.emit('hideMessage', messageId);
+        // try {
+        //     await fetch(`http://localhost:3030/hideMessage/${messageId}`, {
+        //         method: 'POST'
+        //     });
+        //     console.log('Message hidden successfully');
+        //     fetchMessages();
+        // } catch (error) {
+        //     console.error('Error hiding message:', error);
+        // }
     };
 
     const handleHighlightMessage = async (messageId) => {
-        try {
-            await fetch(`http://localhost:3030/highlightMessage/${messageId}`, {
-                method: 'POST'
-            });
-            console.log('Message highlighted successfully');
-            fetchMessages();
-        } catch (error) {
-            console.error('Error highlighting message:', error);
-        }
+        socket.current.emit('highlightMessage', messageId);
+        // try {
+        //     await fetch(`http://localhost:3030/highlightMessage/${messageId}`, {
+        //         method: 'POST'
+        //     });
+        //     console.log('Message highlighted successfully');
+        //     fetchMessages();
+        // } catch (error) {
+        //     console.error('Error highlighting message:', error);
+        // }
     };
 
     const handleBanUser = async (userId) => {
@@ -177,14 +195,12 @@ function Chat() {
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-
             if (newMessage.startsWith('/')) {
-                // Handle slash commands
                 const command = newMessage.trim().toLowerCase();
                 socket.current.emit('command', { command, userId: userInfo._id, channelId });
-                setNewMessage(''); // Clear the input field
+                setNewMessage('');
             } else {
-                handleSendMessage(); // Handle normal messages
+                handleSendMessage();
             }
         }
     };
@@ -312,6 +328,8 @@ function Chat() {
                 
                 <button onClick={handleSendMessage} disabled={!isAdmin && !isPremium && messageCooldown > 0}>Send</button>
             </div>
+
+            {/* all registered users should appear  */}
         </div>
     );
 }

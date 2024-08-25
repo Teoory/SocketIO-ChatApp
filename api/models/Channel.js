@@ -6,9 +6,21 @@ const channelSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    private: {
+        type: Boolean,
+        default: false
+    },
+    closed: {
+        type: Boolean,
+        default: false
+    },
     messages: [{
         type: Schema.Types.ObjectId,
         ref: 'Message'
+    }],
+    allowedUsers: [{
+        type: Schema.Types.ObjectId,
+        ref: 'User'
     }]
 });
 

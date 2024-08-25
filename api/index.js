@@ -95,54 +95,86 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Mesaj içeriğini gizleme
     socket.on('hideMessage', async (messageId) => {
         try {
             const message = await Message.findById(messageId);
-
             if (!message) {
                 return socket.emit('error', { message: 'Message not found' });
             }
-
+    
             message.hidden = !message.hidden;
+    
             await message.save();
-
-            io.to(message.channel).emit('messageHidden', message._id); // Kanalda mesajı gizle/göster
+    
+            io.emit('hiddenMessage', message);
         } catch (error) {
-            socket.emit('error', { error: error.message });
+            socket.emit('error', { message: error.message });
         }
     });
 
-    // Mesajı vurgulama
     socket.on('highlightMessage', async (messageId) => {
-        const {message} = messageId;
         try {
+            const message = await Message.findById(messageId);
             if (!message) {
                 return socket.emit('error', { message: 'Message not found' });
             }
-            if (message.highlighted) {
-                message.highlighted = false;
-            } else {
-                message.highlighted = true;
+    
+            message.highlighted = !message.highlighted;
+    
+            await message.save();
+    
+            io.emit('highlightedMessage', message);
+        } catch (error) {
+            socket.emit('error', { message: error.message });
+        }
+    });
+
+    socket.on('addUserToChannel', async ({ userId, channelId }) => {
+        try {
+            const user = await User.findById(userId);
+            if (!user) {
+                return socket.emit('error', { message: 'User not found' });
             }
 
-            io.to(message.channel).emit('messageHighlighted', message); // Kanalda mesajı vurgula
+            const channel = await Channel.findById(channelId);
+            if (!channel) {
+                return socket.emit('error', { message: 'Channel not found' });
+            }
+
+            if (channel.allowedUsers.includes(userId)) {
+                return socket.emit('error', { message: 'User already added to channel' });
+            }
+
+            channel.allowedUsers.push(userId);
+            await channel.save();
+
+            socket.emit('success', { message: 'User added to channel successfully' });
+            
+            const notification = await Message.create({
+                content: `${user.username} kanala eklendi.`,
+                sender: 'system',
+                senderInfo: '66c74c138bb20534d4cdea86',
+                channel: channelId,
+                hidden: false,
+                highlighted: false,
+                timestamp: new Date(),
+            });
+
+            io.to(channelId).emit('newMessage', notification);
         } catch (error) {
-            socket.emit('error', { error: error.message });
+            socket.emit('error', { message: error.message });
         }
     });
 
 
     socket.on('command', async ({ command, userId, channelId }) => {
         try {
-            // Check if the user is an admin
-            const user = await User.findById(userId); // Fetch the user info from your database
+            const user = await User.findById(userId);
             if (!user || !user.role.includes('admin')) {
                 return socket.emit('error', { message: 'You are not authorized to use this command.' });
             }
 
             if (command === '/bot') {
-                // Create and emit a normal-looking message
                 const message = await Message.create({
                     content: 'Bu bir BOT mesajıdır.',
                     sender: 'system',
@@ -157,13 +189,10 @@ io.on('connection', (socket) => {
             }
 
             if (command === '/hideall') {
-                // Hide all messages in the channel
                 await Message.updateMany({ channel: channelId }, { hidden: true });
 
-                // Notify all clients in the channel to hide all messages
                 io.to(channelId).emit('hideAllMessages');
 
-                // Create and emit a normal-looking notification message
                 const notification = await Message.create({
                     content: 'Bir ADMIN tarafından bütün mesajlar gizlendi.',
                     sender: 'system',
@@ -174,18 +203,15 @@ io.on('connection', (socket) => {
                     timestamp: new Date(),
                 });
 
-                // Emit this notification like a normal message
                 io.to(channelId).emit('newMessage', notification);
             }
 
             if (command === '/showall') {
-                // Show all messages in the channel
                 await Message.updateMany({ channel: channelId }, { hidden: false });
 
                 // Notify all clients in the channel to show all messages
                 io.to(channelId).emit('showAllMessages');
                 
-                // Create and emit a normal-looking notification message
                 const notification = await Message.create({
                     content: 'Bir ADMIN tarafından bütün mesajlar gösterildi.',
                     sender: 'system',
@@ -201,13 +227,10 @@ io.on('connection', (socket) => {
             }
 
             if (command === '/deleteall') {
-                // Delete all messages in the channel
                 await Message.deleteMany({ channel: channelId });
 
-                // Notify all clients in the channel to delete all messages
                 io.to(channelId).emit('deleteAllMessages');
 
-                // Create and emit a normal-looking notification message
                 const notification = await Message.create({
                     content: 'Bir ADMIN tarafından bütün mesajlar silindi.',
                     sender: 'system',
@@ -218,33 +241,84 @@ io.on('connection', (socket) => {
                     timestamp: new Date(),
                 });
 
-                // Emit this notification like a normal message
                 io.to(channelId).emit('newMessage', notification);
             }
 
-            if (command === '/channelclose') {
-                // Close the channel
-                const channel = await Channel.findById(channelId);
-                channel.closed = true;
-                await channel.save();
-
-                // Notify all clients in the channel that the channel is closed
-                io.to(channelId).emit('channelClosed');
-
-                // Create and emit a normal-looking notification message
+            if (command === '/addedusers') {
+                const users = await User.find({ _id: { $in: Channel.allowedUsers } });
                 const notification = await Message.create({
-                    content: 'Bir ADMIN tarafından kanal kapatıldı.',
+                    content: `Kanala izin verilen kullanıcılar: ${users.map(user => user.username).join(', ')}`,
                     sender: 'system',
                     senderInfo: '66c74c138bb20534d4cdea86',
                     channel: channelId,
                     hidden: false,
-                    highlighted: false,
+                    highlighted: true,
                     timestamp: new Date(),
                 });
-
-                // Emit this notification like a normal message
                 io.to(channelId).emit('newMessage', notification);
             }
+
+            if (command === '/private') {
+                if (!Channel.private) {
+                    Channel.private = true;
+                    await Channel.save();
+
+                    const notification = await Message.create({
+                        content: 'Kanal artık özel bir kanal.',
+                        sender: 'system',
+                        senderInfo: '66c74c138bb20534d4cdea86',
+                        channel: channelId,
+                        hidden: false,
+                        highlighted: true,
+                        timestamp: new Date(),
+                    });
+
+                    io.to(channelId).emit('newMessage', notification);
+                }
+            }
+    
+            if (commandName === '/close') {
+                if (!Channel.closed) {
+                    Channel.closed = true;
+                    await Channel.save();
+    
+                    io.to(channelId).emit('channelStatusUpdate', { closed: true });
+
+                    const notification = await Message.create({
+                        content: 'Kanal Kapatılmıştır.',
+                        sender: 'system',
+                        senderInfo: '66c74c138bb20534d4cdea86',
+                        channel: channelId,
+                        hidden: false,
+                        highlighted: true,
+                        timestamp: new Date(),
+                    });
+
+                    io.to(channelId).emit('newMessage', notification);
+                }
+            }
+    
+            if (commandName === '/open') {
+                if (!channel.closed) {
+                    channel.closed = false;
+                    await channel.save();
+    
+                    io.to(channelId).emit('channelStatusUpdate', { closed: false });
+
+                    const notification = await Message.create({
+                        content: 'Kanal tekrar açılmıştır.',
+                        sender: 'system',
+                        senderInfo: '66c74c138bb20534d4cdea86',
+                        channel: channelId,
+                        hidden: false,
+                        highlighted: true,
+                        timestamp: new Date(),
+                    });
+
+                    io.to(channelId).emit('newMessage', notification);
+                }
+            }
+                
             
             else {
                 socket.emit('error', { message: 'Unknown command.' });
@@ -255,13 +329,38 @@ io.on('connection', (socket) => {
     });
 
 
-    // Kullanıcı kanala katıldığında
     socket.on('joinChannel', (channel) => {
         socket.join(channel);
         console.log(`Kullanıcı ${socket.id} kanala katıldı: ${channel}`);
     });
+    // socket.on('joinChannel', async (channelId, username) => {
+    //     try {
+    //         const channel = await Channel.findById(channelId).populate('allowedUsers');
+    
+    //         if (!channel) {
+    //             return socket.emit('error', { message: 'Channel not found' });
+    //         }
+    
+    //         const user = await User.findById(username);
+    
+    //         // Kanal kapalıysa sadece adminler görebilir
+    //         if (channel.closed && user.role !== 'admin') {
+    //             return socket.emit('error', { message: 'Channel is closed' });
+    //         }
+    
+    //         // Kanal özelse ve kullanıcının izni yoksa
+    //         if (channel.private && user.role !== 'admin' && !channel.allowedUsers.includes(username)) {
+    //             return socket.emit('error', { message: 'You do not have permission to view this channel' });
+    //         }
+    
+    //         // Kullanıcıya kanala katılmasına izin ver
+    //         socket.join(channelId);
+    //         socket.emit('success', { message: `Joined channel: ${channel.name}` });
+    //     } catch (error) {
+    //         socket.emit('error', { message: error.message });
+    //     }
+    // });
 
-    // Bağlantı kesildiğinde
     socket.on('disconnect', () => {
         console.log('Bir kullanıcı bağlantısını kesti:', socket.id);
     });

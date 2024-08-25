@@ -29,15 +29,39 @@ const Home = () => {
         fetchChannels();
     }, []);
 
+    // const fetchChannels = async () => {
+    //     try {
+    //         const response = await fetch('http://localhost:3030/channels');
+    //         const data = await response.json();
+    //         setChannels(data);
+    //     } catch (error) {
+    //         console.error('Error fetching channels:', error);
+    //     }
+    // };
+    const isAdmin = userInfo?.role?.includes('admin');
+    const username = userInfo?.username;
     const fetchChannels = async () => {
         try {
             const response = await fetch('http://localhost:3030/channels');
-            const data = await response.json();
-            setChannels(data);
+            const channels = await response.json();
+            
+            // Kullanıcı iznine göre filtreleme
+            const accessibleChannels = channels.filter(channel => {
+                if (channel.closed && !isAdmin) {
+                    return false;
+                }
+                if (channel.private && !isAdmin && !channel.allowedUsers.includes(userInfo.username)) {
+                    return false;
+                }
+                return true;
+            });
+    
+            setChannels(accessibleChannels);
         } catch (error) {
             console.error('Error fetching channels:', error);
         }
     };
+    
 
     if (!userInfo) {
         return <Navigate to="/login" />;
