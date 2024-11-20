@@ -111,11 +111,11 @@ function Chat() {
             return;
         }
 
-        const isSystem = userInfo.role.includes('system');
-        const isAdmin = userInfo.role.includes('admin');
-        const isPremium = userInfo.role.includes('premium');
-        const isUser = userInfo.role.includes('user');
-        const isQuest = userInfo.role.includes('quest');
+        const isSystem = userInfo.role === 'system';
+        const isAdmin = userInfo.role === 'admin';
+        const isPremium = userInfo.role === 'premium';
+        const isUser = userInfo.role === 'user';
+        const isQuest = userInfo.role === 'guest';
 
         if (!isAdmin && !isPremium && messageCooldown > 0) {
             console.log(`Tekrar mesaj gönderebilmek için kalan süren: ${messageCooldown}`);
@@ -131,16 +131,6 @@ function Chat() {
                 userColor: userInfo.userColor,
                 senderColor: userInfo.userColor,
             };
-
-            // await fetch('http://localhost:3030/messages', {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //     },
-            //     body: JSON.stringify(messageData),
-            // });
-
-            // Emit the new message to the server
             socket.current.emit('sendMessage', messageData);
             setNewMessage('');
             // fetchMessages();
@@ -240,11 +230,11 @@ function Chat() {
                             ?   <span className={`senderYou ${userColor}`}>
                                 {isAdmin && (
                                     // <span style={{fontSize: "10px", fontWeight: "800"}} className='admin'>(ADMIN) </span>
-                                    <span style={{fontSize: "10px", fontWeight: "800"}} className={`admin`}>(ADMIN) </span>
+                                    <span style={{fontSize: "10px", fontWeight: "800"}} className={`admin`}>⚔️(ADMIN) </span>
                                 )}
                                 {isPremium && (
                                     <>
-                                    <span style={{fontSize: "10px", fontWeight: "800"}} className='premium'>(Premium)</span>
+                                    <span style={{fontSize: "10px", fontWeight: "800"}} className='premium'>💎(Premium)</span>
                                     </>
                                 )}
 
@@ -293,8 +283,8 @@ function Chat() {
         scrollToBottom();
     }, [messages]);
 
-    const isAdmin = userInfo?.role?.includes('admin');
-    const isPremium = userInfo?.role?.includes('premium');
+    const isAdmin = userInfo.role === 'admin';
+    const isPremium = userInfo.role === 'premium';
     const userColor = userInfo?.userColor;
 
     return (

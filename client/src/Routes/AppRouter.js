@@ -30,12 +30,11 @@ const AppRouter = () => {
   }, []);
   
   const role = userInfo?.role;
-
-  const isAdmin = role?.includes('admin');
-  const isEditor = role?.includes('editor') || isAdmin;
-  const isPremium = role?.includes('premium') || isEditor;
-  const isUser = role?.includes('user') || isPremium;
-  const isQuest = role?.includes('quest') || isUser;
+  const isAdmin = role === 'admin';
+  const isEditor = role === 'editor' || isAdmin;
+  const isPremium = role === 'premium' || isEditor;
+  const isUser = role === 'user' || isPremium;
+  const isQuest = role === 'guest' || isUser;
 
   return (
     <Routes>

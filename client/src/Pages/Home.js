@@ -38,7 +38,7 @@ const Home = () => {
     //         console.error('Error fetching channels:', error);
     //     }
     // };
-    const isAdmin = userInfo?.role?.includes('admin');
+    const isAdmin = userInfo?.role === 'admin';
     const username = userInfo?.username;
     const fetchChannels = async () => {
         try {

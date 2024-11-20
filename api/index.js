@@ -8,10 +8,8 @@ const MailVerification = require('./models/MailVerification');
 const bcrypt = require ('bcryptjs');
 const jwt = require ('jsonwebtoken');
 const cookieParser = require ('cookie-parser');
-const multer = require ('multer');
-const path = require ('path');
-const fs = require ('fs');
 const sesion = require ('express-session');
+const Iyzipay = require('iyzipay');
 const nodemailer = require('nodemailer');
 const crypto = require ('crypto');
 const http = require('http');
@@ -20,6 +18,12 @@ const { time } = require('console');
 
 const app = express ();
 const server = http.createServer(app);
+
+require ('dotenv').config ();
+
+const salt = bcrypt.genSaltSync(10);
+const secret = process.env.SECRET;
+
 const io = new Server(server, {
     cors: {
         origin: ['http://localhost:3000'],
@@ -28,17 +32,6 @@ const io = new Server(server, {
         allowedHeaders: 'Content-Type, Authorization',
     },
 });
-
-require ('dotenv').config ();
-
-const salt = bcrypt.genSaltSync(10);
-
-const generate_secret = () => {
-    const secret = crypto.randomBytes(32).toString("hex");
-    return secret;
-};
-const secret = generate_secret();
-
 
 const corsOptions = {
     origin: ['http://localhost:3000', 'http://localhost:3030'],
@@ -57,7 +50,17 @@ app.use (sesion ({
     saveUninitialized: true
 }));
 
-mongoose.connect (process.env.MONGODB_URL);
+const iyzipay = new Iyzipay({
+    apiKey: process.env.IYZICO_API_KEY,
+    secretKey: process.env.IYZICO_SECRET_KEY,
+    uri: 'https://sandbox-api.iyzipay.com'
+});
+
+mongoose.connect (process.env.MONGODB_URL)
+.then (() => { console.log ('Connected to MongoDB') })
+.catch ((e) => { console.error ('Error connecting to MongoDB:', e) });
+
+
 
 const transporter = nodemailer.createTransport({
     host: 'ssl://smtp.yandex.com',
@@ -73,7 +76,6 @@ const transporter = nodemailer.createTransport({
 io.on('connection', (socket) => {
     console.log('Yeni bir kullanıcı bağlandı:', socket.id);
 
-    // Mesaj gönderme olayı
     socket.on('sendMessage', async (data) => {
         const { content, sender, senderInfo, channel } = data;
         try {
@@ -89,7 +91,7 @@ io.on('connection', (socket) => {
                 channel
             });
 
-            io.to(channel).emit('newMessage', message); // Kanala yeni mesajı yayınla
+            io.to(channel).emit('newMessage', message);
         } catch (err) {
             socket.emit('error', { error: err.message });
         }
@@ -152,8 +154,8 @@ io.on('connection', (socket) => {
             
             const notification = await Message.create({
                 content: `${user.username} kanala eklendi.`,
-                sender: 'system',
-                senderInfo: '66c74c138bb20534d4cdea86',
+                sender: 'system2',
+                senderInfo: '673e08d210077450d8512e62',
                 channel: channelId,
                 hidden: false,
                 highlighted: false,
@@ -178,7 +180,133 @@ io.on('connection', (socket) => {
                 const message = await Message.create({
                     content: 'Bu bir BOT mesajıdır.',
                     sender: 'system',
-                    senderInfo: '66c74c138bb20534d4cdea86',
+                    senderInfo: '673e08d210077450d8512e62',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                io.to(channelId).emit('newMessage', message);
+            }
+
+            if (command === '/help') {
+                const message = await Message.create({
+                    content: 'Kullanılabilir komutlar: /bot, /help <komut_adı> /hideall, /showall, /deleteall, /private, /addedusers, /adduser <username>, /close, /open',
+                    sender: 'system',
+                    senderInfo: '673e08d210077450d8512e62',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                io.to(channelId).emit('newMessage', message);
+            }
+
+            if (command === '/help hideall') {
+                const message = await Message.create({
+                    content: '/hideall: Tüm mesajları gizler.',
+                    sender: 'system',
+                    senderInfo: '673e08d210077450d8512e62',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                io.to(channelId).emit('newMessage', message);
+            }
+
+            if (command === '/help showall') {
+                const message = await Message.create({
+                    content: '/showall: Tüm mesajları gösterir.',
+                    sender: 'system',
+                    senderInfo: '673e08d210077450d8512e62',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                io.to(channelId).emit('newMessage', message);
+            }
+
+            if (command === '/help deleteall') {
+                const message = await Message.create({
+                    content: '/deleteall: Tüm mesajları siler.',
+                    sender: 'system',
+                    senderInfo: '673e08d210077450d8512e62',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                io.to(channelId).emit('newMessage', message);
+            }
+
+            if (command === '/help private') {
+                const message = await Message.create({
+                    content: '/private: Kanalı özel yapar. Sadece izin verilen kullanıcılar görebilir.',
+                    sender: 'system',
+                    senderInfo: '673e08d210077450d8512e62',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                io.to(channelId).emit('newMessage', message);
+            }
+
+            if (command === '/help addedusers') {
+                const message = await Message.create({
+                    content: '/addedusers: Kanala izin verilen kullanıcıları listeler.',
+                    sender: 'system',
+                    senderInfo: '673e08d210077450d8512e62',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                io.to(channelId).emit('newMessage', message);
+            }
+
+            if (command === '/help adduser') {
+                const message = await Message.create({
+                    content: '/adduser <username>: Kanala yeni bir kullanıcı ekler.',
+                    sender: 'system',
+                    senderInfo: '673e08d210077450d8512e62',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                io.to(channelId).emit('newMessage', message);
+            }
+
+            if (command === '/help close') {
+                const message = await Message.create({
+                    content: '/close: Kanalı kapatır. Kapatılan kanala sadece adminler erişebilir.',
+                    sender: 'system',
+                    senderInfo: '673e08d210077450d8512e62',
+                    channel: channelId,
+                    hidden: false,
+                    highlighted: false,
+                    timestamp: new Date(),
+                });
+
+                io.to(channelId).emit('newMessage', message);
+            }
+
+            if (command === '/help open') {
+                const message = await Message.create({
+                    content: '/open: Kanalı tekrar açar. Herkes kanala erişebilir.',
+                    sender: 'system',
+                    senderInfo: '673e08d210077450d8512e62',
                     channel: channelId,
                     hidden: false,
                     highlighted: false,
@@ -196,7 +324,7 @@ io.on('connection', (socket) => {
                 const notification = await Message.create({
                     content: 'Bir ADMIN tarafından bütün mesajlar gizlendi.',
                     sender: 'system',
-                    senderInfo: '66c74c138bb20534d4cdea86',
+                    senderInfo: '673e08d210077450d8512e62',
                     channel: channelId,
                     hidden: false,
                     highlighted: false,
@@ -215,7 +343,7 @@ io.on('connection', (socket) => {
                 const notification = await Message.create({
                     content: 'Bir ADMIN tarafından bütün mesajlar gösterildi.',
                     sender: 'system',
-                    senderInfo: '66c74c138bb20534d4cdea86',
+                    senderInfo: '673e08d210077450d8512e62',
                     channel: channelId,
                     hidden: false,
                     highlighted: false,
@@ -234,7 +362,7 @@ io.on('connection', (socket) => {
                 const notification = await Message.create({
                     content: 'Bir ADMIN tarafından bütün mesajlar silindi.',
                     sender: 'system',
-                    senderInfo: '66c74c138bb20534d4cdea86',
+                    senderInfo: '673e08d210077450d8512e62',
                     channel: channelId,
                     hidden: false,
                     highlighted: false,
@@ -249,7 +377,7 @@ io.on('connection', (socket) => {
                 const notification = await Message.create({
                     content: `Kanala izin verilen kullanıcılar: ${users.map(user => user.username).join(', ')}`,
                     sender: 'system',
-                    senderInfo: '66c74c138bb20534d4cdea86',
+                    senderInfo: '673e08d210077450d8512e62',
                     channel: channelId,
                     hidden: false,
                     highlighted: true,
@@ -266,7 +394,7 @@ io.on('connection', (socket) => {
                     const notification = await Message.create({
                         content: 'Kanal artık özel bir kanal.',
                         sender: 'system',
-                        senderInfo: '66c74c138bb20534d4cdea86',
+                        senderInfo: '673e08d210077450d8512e62',
                         channel: channelId,
                         hidden: false,
                         highlighted: true,
@@ -287,7 +415,7 @@ io.on('connection', (socket) => {
                     const notification = await Message.create({
                         content: 'Kanal Kapatılmıştır.',
                         sender: 'system',
-                        senderInfo: '66c74c138bb20534d4cdea86',
+                        senderInfo: '673e08d210077450d8512e62',
                         channel: channelId,
                         hidden: false,
                         highlighted: true,
@@ -308,7 +436,7 @@ io.on('connection', (socket) => {
                     const notification = await Message.create({
                         content: 'Kanal tekrar açılmıştır.',
                         sender: 'system',
-                        senderInfo: '66c74c138bb20534d4cdea86',
+                        senderInfo: '673e08d210077450d8512e62',
                         channel: channelId,
                         hidden: false,
                         highlighted: true,
@@ -458,9 +586,12 @@ app.post('/register', async (req, res) => {
             username,
             generatedUsername: generateRandomPassword(),
             password: bcrypt.hashSync(password, salt),
-            role: 'quest',
+            role: 'guest',
             isBanned: false,
+            isVerified: false,
+            premiumExpiration: Date.now(),
             userColor: 'blue',
+            createdAt: Date.now(),
         });
         res.json({userDoc});
     } catch (error) {
@@ -484,18 +615,35 @@ app.post('/login', async (req, res) => {
     }
     const passOk = bcrypt.compareSync(password, userDoc.password);
     if (passOk) {
-        jwt.sign({ username, password }, secret, {}, (err, token) => {
+        jwt.sign(
+            {
+                email:userDoc.email, 
+                username:userDoc.username, 
+                role:userDoc.role, 
+                premiumExpiration:userDoc.premiumExpiration, 
+                isBanned:userDoc.isBanned, 
+                id:userDoc._id
+            }, secret, {}, (err, token) => {
             if (err) {
                 console.error('Error generating token:', err);
                 return res.status(500).send('Error generating token');
             }
 
-            res.cookie('token', token, { sameSite: "none", maxAge: 3600000, httpOnly: false, secure: true}).json({
+            res.cookie('token', token,{
+                    sameSite: "none",
+                    maxAge: 24 * 60 * 60 * 1000,
+                    httpOnly: false,
+                    secure: true
+                }).json({
                 id: userDoc._id,
-                username,
+                email: userDoc.email,
+                username: userDoc.username,
+                password: userDoc.password,
                 generatedUsername: userDoc.generatedUsername,
                 role: userDoc.role,
+                premiumExpiration: userDoc.premiumExpiration,
                 isBanned: userDoc.isBanned,
+                isVerified: userDoc.isVerified,
                 userColor: userDoc.userColor,
             });
             console.log('token:', token);
@@ -508,8 +656,13 @@ app.post('/login', async (req, res) => {
 
 app.post('/logout', (req, res) => {
     req.session.destroy();
-    res.clearCookie('token');
-    res.status(200).send('Logged out successfully');
+    res.clearCookie('token').json({message: 'Logged out from all devices'});
+    res.cookie('token', '', {
+        sameSite: "none",
+        maxAge: 0,
+        httpOnly: false,
+        secure: true
+    });
 });
 
 //? Profile
@@ -718,6 +871,86 @@ app.post('/unbanUser/:userId', async (req, res) => {
         res.status(200).json({ message: 'User unbanned successfully' });
     } catch (err) {
         res.status(400).json({ error: err.message });
+    }
+});
+
+
+
+//? Payment
+app.post('/payment', async (req, res) => {
+    const { userId, price, paymentCard } = req.body;
+
+    console.log("Gelen Ödeme Talebi:", req.body); // Bu satır eklendi
+
+    if (!paymentCard) {
+        return res.status(400).json({ message: 'PaymentCard bilgisi eksik' });
+    }
+
+    try {
+        const paymentRequest = {
+            locale: Iyzipay.LOCALE.TR,
+            conversationId: userId,
+            price: price,
+            paidPrice: price,
+            currency: Iyzipay.CURRENCY.TRY,
+            installment: 1,
+            basketId: 'B67832',
+            paymentChannel: Iyzipay.PAYMENT_CHANNEL.WEB,
+            paymentGroup: Iyzipay.PAYMENT_GROUP.PRODUCT,
+            callbackUrl: 'http://localhost:3030/payment/callback',
+            buyer: {
+                id: userId,
+                name: 'Kullanıcı',
+                surname: 'Adı',
+                email: 'kullanici@example.com',
+                identityNumber: '11111111111',
+                registrationAddress: 'Adres',
+                city: 'Şehir',
+                country: 'Türkiye',
+                zipCode: '34732',
+            },
+            shippingAddress: {
+                contactName: 'Kullanıcı Adı',
+                city: 'Şehir',
+                country: 'Türkiye',
+                address: 'Adres',
+                zipCode: '34732',
+            },
+            billingAddress: {
+                contactName: 'Kullanıcı Adı',
+                city: 'Şehir',
+                country: 'Türkiye',
+                address: 'Adres',
+                zipCode: '34732',
+            },
+            basketItems: [
+                {
+                    id: 'BI101',
+                    name: 'Premium Üyelik',
+                    category1: 'Üyelik',
+                    itemType: Iyzipay.BASKET_ITEM_TYPE.VIRTUAL,
+                    price: price,
+                },
+            ],
+            paymentCard, // Bu alan eklendi
+        };
+
+        iyzipay.payment.create(paymentRequest, async (err, result) => {
+            if (err || result.status !== 'success') {
+                console.error("Ödeme Hatası:", err || result);
+                return res.status(400).json({ message: 'Ödeme başarısız', error: err || result });
+            }
+
+            // Kullanıcıyı premium yap
+            const premiumExpiration = new Date();
+            premiumExpiration.setMonth(premiumExpiration.getMonth() + 1);
+            await User.findByIdAndUpdate(userId, { role: 'premium', premiumExpiration });
+
+            res.status(200).json({ message: 'Ödeme başarılı, Premium aktif edildi', result });
+        });
+    } catch (error) {
+        console.error("Sunucu Hatası:", error);
+        res.status(500).json({ message: 'Bir hata oluştu', error });
     }
 });
 

@@ -21,8 +21,12 @@ const UserSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['admin', 'moderator', 'premium', 'user', 'quest', 'system'],
-        default: 'quest'
+        enum: ['admin', 'moderator', 'premium', 'user', 'guest', 'system'],
+        default: 'guest'
+    },
+    premiumExpiration: {
+        type: Date,
+        default: Date.now()
     },
     isBanned: {
         type: Boolean,

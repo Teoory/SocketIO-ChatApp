@@ -50,7 +50,7 @@ const ProfilPage = () => {
         });
     };
 
-    const vipRole = userInfo.role.includes('admin') || userInfo.role.includes('premium') || userInfo.role.includes('editor');
+    const vipRole = userInfo.role === 'admin' || userInfo.role === 'premium' || userInfo.role === 'editor';
     const userColor = userInfo?.userColor;
 
     if (!userInfo) {
